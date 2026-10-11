@@ -3,7 +3,7 @@ package meowcaller
 import (
 	"testing"
 
-	waBinary "github.com/polymorfa/hypermeow/binary"
+	waBinary "go.mau.fi/whatsmeow/binary"
 )
 
 func te2(name, authTokenID, c2rRTT, isFNA string, ip [4]byte) waBinary.Node {
