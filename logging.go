@@ -4,6 +4,8 @@ import (
 	"net"
 	"time"
 
+	"go.mau.fi/whatsmeow/types"
+
 	"github.com/purpshell/meowcaller/diag"
 	"github.com/rs/zerolog"
 )
@@ -20,6 +22,7 @@ type config struct {
 	audioRTP        func(callID string, ssrc uint32, seq uint16, timestamp uint32)
 	reorderWindow   time.Duration
 	reorderReport   func(callID string, audio, video AudioReorderReport)
+	offerGate       func(Offer) bool
 }
 
 func resolveConfig(opts []Option) config {
@@ -71,4 +74,27 @@ func WithAudioReorderWindow(window time.Duration) Option {
 // reorder stage did to the call's inbound audio and video.
 func WithAudioReorderReport(fn func(callID string, audio, video AudioReorderReport)) Option {
 	return func(c *config) { c.reorderReport = fn }
+}
+
+// Offer is what an offer gate is told about an inbound call before the library
+// touches it.
+type Offer struct {
+	CallID string
+	// From is the stanza's sender; Creator is the call-creator, the same user on a
+	// 1:1 call.
+	From    types.JID
+	Creator types.JID
+	// Group reports a group call or call-link invite.
+	Group bool
+	// Video reports that the offer advertises video.
+	Video bool
+}
+
+// WithOfferGate makes the library ask before it engages with an inbound offer. When
+// fn returns false nothing is decrypted, no <preaccept> is sent, no media starts and
+// OnIncomingCall does not fire: the device stays as passive as a plain whatsmeow
+// client. Without a gate every offer is engaged. fn runs on whatsmeow's event
+// dispatch: keep it short.
+func WithOfferGate(fn func(Offer) bool) Option {
+	return func(c *config) { c.offerGate = fn }
 }
