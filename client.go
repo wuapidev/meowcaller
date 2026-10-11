@@ -26,6 +26,7 @@ type Client struct {
 	eng  *engine
 
 	mediaPacketConn func(relayAddr *net.UDPAddr) (net.PacketConn, error)
+	audioRTP        func(callID string, ssrc uint32, seq uint16, timestamp uint32)
 
 	getGroupInfo func(context.Context, types.JID) (*types.GroupInfo, error)
 	ownGroupJIDs func() []types.JID
@@ -57,6 +58,7 @@ func NewClient(wa *whatsmeow.Client, opts ...Option) *Client {
 	c := &Client{
 		wa: wa, log: cfg.log, diag: cfg.diag,
 		mediaPacketConn: cfg.mediaPacketConn,
+		audioRTP:        cfg.audioRTP,
 		getGroupInfo:    wa.GetGroupInfo,
 		ownGroupJIDs: func() []types.JID {
 			return []types.JID{wa.Store.GetJID(), wa.Store.GetLID()}

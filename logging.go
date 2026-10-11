@@ -16,6 +16,7 @@ type config struct {
 	diag *diag.Recorder
 
 	mediaPacketConn func(relayAddr *net.UDPAddr) (net.PacketConn, error)
+	audioRTP        func(callID string, ssrc uint32, seq uint16, timestamp uint32)
 }
 
 func resolveConfig(opts []Option) config {
@@ -47,4 +48,11 @@ func WithDiagnostics(rec *diag.Recorder) Option {
 // the same exit as signalling (a SOCKS5 UDP association).
 func WithMediaPacketConn(fn func(relayAddr *net.UDPAddr) (net.PacketConn, error)) Option {
 	return func(c *config) { c.mediaPacketConn = fn }
+}
+
+// WithAudioRTPObserver calls fn for every audio RTP packet a call receives from the
+// relay, in arrival order and before decryption, so a consumer can measure loss,
+// duplicates and reordering on the media path. fn runs on the receive loop: keep it short.
+func WithAudioRTPObserver(fn func(callID string, ssrc uint32, seq uint16, timestamp uint32)) Option {
+	return func(c *config) { c.audioRTP = fn }
 }
