@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/purpshell/meowcaller/diag"
 	"github.com/rs/zerolog"
@@ -27,6 +28,8 @@ type Client struct {
 
 	mediaPacketConn func(relayAddr *net.UDPAddr) (net.PacketConn, error)
 	audioRTP        func(callID string, ssrc uint32, seq uint16, timestamp uint32)
+	reorderWindow   time.Duration
+	reorderReport   func(callID string, audio, video AudioReorderReport)
 
 	getGroupInfo func(context.Context, types.JID) (*types.GroupInfo, error)
 	ownGroupJIDs func() []types.JID
@@ -59,6 +62,8 @@ func NewClient(wa *whatsmeow.Client, opts ...Option) *Client {
 		wa: wa, log: cfg.log, diag: cfg.diag,
 		mediaPacketConn: cfg.mediaPacketConn,
 		audioRTP:        cfg.audioRTP,
+		reorderWindow:   cfg.reorderWindow,
+		reorderReport:   cfg.reorderReport,
 		getGroupInfo:    wa.GetGroupInfo,
 		ownGroupJIDs: func() []types.JID {
 			return []types.JID{wa.Store.GetJID(), wa.Store.GetLID()}

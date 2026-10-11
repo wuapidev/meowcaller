@@ -2,6 +2,7 @@ package meowcaller
 
 import (
 	"net"
+	"time"
 
 	"github.com/purpshell/meowcaller/diag"
 	"github.com/rs/zerolog"
@@ -17,10 +18,12 @@ type config struct {
 
 	mediaPacketConn func(relayAddr *net.UDPAddr) (net.PacketConn, error)
 	audioRTP        func(callID string, ssrc uint32, seq uint16, timestamp uint32)
+	reorderWindow   time.Duration
+	reorderReport   func(callID string, audio, video AudioReorderReport)
 }
 
 func resolveConfig(opts []Option) config {
-	c := config{log: zerolog.Nop()}
+	c := config{log: zerolog.Nop(), reorderWindow: DefaultAudioReorderWindow}
 	for _, opt := range opts {
 		opt(&c)
 	}
@@ -51,8 +54,21 @@ func WithMediaPacketConn(fn func(relayAddr *net.UDPAddr) (net.PacketConn, error)
 }
 
 // WithAudioRTPObserver calls fn for every audio RTP packet a call receives from the
-// relay, in arrival order and before decryption, so a consumer can measure loss,
+// relay, in arrival order, before the reorder stage and before decryption, so a consumer can measure loss,
 // duplicates and reordering on the media path. fn runs on the receive loop: keep it short.
 func WithAudioRTPObserver(fn func(callID string, ssrc uint32, seq uint16, timestamp uint32)) Option {
 	return func(c *config) { c.audioRTP = fn }
+}
+
+// WithAudioReorderWindow sets how long inbound audio or video that arrived ahead of a missing
+// packet waits for it (DefaultAudioReorderWindow when unset). Zero or less turns the
+// reorder stage off: packets reach the decoder in arrival order.
+func WithAudioReorderWindow(window time.Duration) Option {
+	return func(c *config) { c.reorderWindow = window }
+}
+
+// WithAudioReorderReport calls fn once per call, when its media ends, with what the
+// reorder stage did to the call's inbound audio and video.
+func WithAudioReorderReport(fn func(callID string, audio, video AudioReorderReport)) Option {
+	return func(c *config) { c.reorderReport = fn }
 }
