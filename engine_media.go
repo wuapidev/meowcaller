@@ -924,6 +924,9 @@ func (e *engine) runMedia(ctx context.Context, callID string, call *Call, callKe
 			continue
 		}
 		kind := classifyMediaPayload(vh)
+		if kind == mediaPayloadAudio && e.c.audioRTP != nil {
+			e.c.audioRTP(callID, vh.Ssrc, vh.SequenceNumber, vh.Timestamp)
+		}
 		if kind == mediaPayloadAppData {
 			media, ok := audioReceivers.UnprotectAppData(pkt)
 			if !ok {

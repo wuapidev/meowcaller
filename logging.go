@@ -12,6 +12,8 @@ type Option func(*config)
 type config struct {
 	log  zerolog.Logger
 	diag *diag.Recorder
+
+	audioRTP func(callID string, ssrc uint32, seq uint16, timestamp uint32)
 }
 
 func resolveConfig(opts []Option) config {
@@ -36,4 +38,11 @@ func WithLogger(l zerolog.Logger) Option {
 // diag emit is a no-op at zero cost.
 func WithDiagnostics(rec *diag.Recorder) Option {
 	return func(c *config) { c.diag = rec }
+}
+
+// WithAudioRTPObserver calls fn for every audio RTP packet a call receives from the
+// relay, in arrival order and before decryption, so a consumer can measure loss,
+// duplicates and reordering on the media path. fn runs on the receive loop: keep it short.
+func WithAudioRTPObserver(fn func(callID string, ssrc uint32, seq uint16, timestamp uint32)) Option {
+	return func(c *config) { c.audioRTP = fn }
 }
